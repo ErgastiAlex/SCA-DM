@@ -29,3 +29,6 @@ models/
 *.sh
 *.txt
 outputs/
+configs/
+*.sh
+*.bash
