@@ -810,10 +810,11 @@ class UNetModel(nn.Module):
             for i in range(num_res_blocks + 1):
                 ich = input_block_chans.pop()
                 layers = [
-                    ResBlock(
+                    SDMResBlock(
                         ch + ich,
                         time_embed_dim,
                         dropout,
+                        c_channels=num_classes,
                         out_channels=model_channels * mult,
                         dims=dims,
                         use_checkpoint=use_checkpoint,
@@ -844,10 +845,11 @@ class UNetModel(nn.Module):
                 if level and i == num_res_blocks:
                     out_ch = ch
                     layers.append(
-                        ResBlock(
+                        SDMResBlock(
                             ch,
                             time_embed_dim,
                             dropout,
+                            c_channels=num_classes,
                             out_channels=out_ch,
                             dims=dims,
                             use_checkpoint=use_checkpoint,
