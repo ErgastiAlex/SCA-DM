@@ -11,6 +11,18 @@ model:
     image_size: 64
     channels: 3
     monitor: val/loss_simple_ema
+    conditioning_key: "crossattn"
+    cond_stage_trainable: True 
+    attn_loss_weight: 1
+
+    cond_stage_config:
+      target: ldm.modules.diffusionmodules.styleenc.MultiScaleEffStyleEncoder
+      params:
+        num_downsample: 6
+        num_upsample: 5
+        num_feat: 4
+        num_mask_channels: 19
+        output_dim: 256
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
@@ -34,6 +46,10 @@ model:
         - 3
         - 4
         num_head_channels: 32
+        use_spatial_transformer: True
+        context_dim: 1280
+        num_classes: 20
+
     first_stage_config:
       target: ldm.models.autoencoder.VQModelInterface
       params:
@@ -56,21 +72,30 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
-    cond_stage_config: __is_unconditional__
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 48
+    batch_size: 8
     num_workers: 5
     wrap: false
     train:
-      target: taming.data.faceshq.CelebAHQTrain
+      target: dataset.CelebAHQ
       params:
         size: 256
+        path: /home/datasets/CelebA-HQ/train
+        keys: ["image","label"]
     validation:
-      target: taming.data.faceshq.CelebAHQValidation
+      target: dataset.CelebAHQ
       params:
         size: 256
+        path: /home/datasets/CelebA-HQ/test
+        keys: ["image","label"]
+    test:
+      target: dataset.CelebAHQ
+      params:
+        size: 256
+        path: /home/datasets/CelebA-HQ/test
+        keys: ["image","label"]
 
 
 lightning:
@@ -78,10 +103,12 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 5000
+        batch_frequency: 500
         max_images: 8
         increase_log_steps: False
+    
 
   trainer:
     benchmark: True
-    
+    accumulate_grad_batches: 6
+    max_epochs: 100

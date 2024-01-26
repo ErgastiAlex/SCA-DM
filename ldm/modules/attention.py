@@ -171,6 +171,8 @@ class CrossAttention(nn.Module):
         h = self.heads
 
         q = self.to_q(x)
+        
+        return_attn=context is None
         context = default(context, x)
         k = self.to_k(context)
         v = self.to_v(context)
@@ -190,7 +192,10 @@ class CrossAttention(nn.Module):
 
         out = einsum('b i j, b j d -> b i d', attn, v)
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
-        return self.to_out(out)
+
+        if return_attn:
+            return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class BasicTransformerBlock(nn.Module):
@@ -210,9 +215,14 @@ class BasicTransformerBlock(nn.Module):
 
     def _forward(self, x, context=None):
         x = self.attn1(self.norm1(x)) + x
-        x = self.attn2(self.norm2(x), context=context) + x
+
+        out = self.attn2(self.norm2(x), context=context)
+        out, attn2 = out
+
+        x = out + x
         x = self.ff(self.norm3(x)) + x
-        return x
+
+        return x, attn2
 
 
 class SpatialTransformer(nn.Module):
@@ -249,6 +259,7 @@ class SpatialTransformer(nn.Module):
 
     def forward(self, x, context=None):
         # note: if no context is given, cross-attention defaults to self-attention
+        attn=None
         b, c, h, w = x.shape
         x_in = x
         x = self.norm(x)
@@ -256,6 +267,10 @@ class SpatialTransformer(nn.Module):
         x = rearrange(x, 'b c h w -> b (h w) c')
         for block in self.transformer_blocks:
             x = block(x, context=context)
+            if isinstance(x, tuple):
+                x, attn = x
         x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w)
         x = self.proj_out(x)
+        if attn is not None:
+            return x + x_in, attn
         return x + x_in

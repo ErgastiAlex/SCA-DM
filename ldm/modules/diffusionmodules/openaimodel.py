@@ -7,6 +7,8 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
+import einops
+from ldm.modules.diffusionmodules.styleenc import MultiScaleEffStyleEncoder
 
 from ldm.modules.diffusionmodules.util import (
     checkpoint,
@@ -70,21 +72,39 @@ class TimestepBlock(nn.Module):
         Apply the module to `x` given `emb` timestep embeddings.
         """
 
+class CondTimestepBlock(nn.Module):
+    """
+    Any module where forward() takes timestep embeddings as a second argument.
+    """
 
-class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
+    @abstractmethod
+    def forward(self, x, cond, emb):
+        """
+        Apply the module to `x` given `emb` timestep embeddings.
+        """
+
+
+class TimestepEmbedSequential(nn.Sequential, TimestepBlock, CondTimestepBlock):
     """
     A sequential module that passes timestep embeddings to the children that
     support it as an extra input.
     """
 
-    def forward(self, x, emb, context=None):
+    def forward(self, x, cond, emb, context=None):
+        attn=None
         for layer in self:
-            if isinstance(layer, TimestepBlock):
+            if isinstance(layer, CondTimestepBlock):
+                x = layer(x, cond, emb)
+            elif isinstance(layer, TimestepBlock):
                 x = layer(x, emb)
             elif isinstance(layer, SpatialTransformer):
                 x = layer(x, context)
+                if isinstance(x,tuple):
+                    x, attn = x
             else:
                 x = layer(x)
+        if attn is not None:
+            return x, attn
         return x
 
 
@@ -273,6 +293,165 @@ class ResBlock(TimestepBlock):
             h = h + emb_out
             h = self.out_layers(h)
         return self.skip_connection(x) + h
+
+class CondTimestepBlock(TimestepBlock):
+    """
+    Any module where forward() takes timestep embeddings as a second argument.
+    """
+
+    @abstractmethod
+    def forward(self, x, emb):
+        """
+        Apply the module to `x` given `emb` timestep embeddings.
+        """
+
+class SPADEGroupNorm(nn.Module):
+    def __init__(self, norm_nc, label_nc, eps = 1e-5):
+        super().__init__()
+
+        self.norm = nn.GroupNorm(32, norm_nc, affine=False) # 32/16
+
+        self.eps = eps
+        nhidden = 128
+        self.mlp_shared = nn.Sequential(
+            nn.Conv2d(label_nc, nhidden, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.mlp_gamma = nn.Conv2d(nhidden, norm_nc, kernel_size=3, padding=1)
+        self.mlp_beta = nn.Conv2d(nhidden, norm_nc, kernel_size=3, padding=1)
+
+    def forward(self, x, segmap):
+        # Part 1. generate parameter-free normalized activations
+        x = self.norm(x)
+
+        # Part 2. produce scaling and bias conditioned on semantic map
+        segmap = F.interpolate(segmap, size=x.size()[2:], mode='nearest')
+        actv = self.mlp_shared(segmap)
+        gamma = self.mlp_gamma(actv)
+        beta = self.mlp_beta(actv)
+
+        # apply scale and bias
+        return x * (1 + gamma) + beta
+
+class SDMResBlock(CondTimestepBlock):
+    """
+    A residual block that can optionally change the number of channels.
+
+    :param channels: the number of input channels.
+    :param emb_channels: the number of timestep embedding channels.
+    :param dropout: the rate of dropout.
+    :param out_channels: if specified, the number of out channels.
+    :param use_conv: if True and out_channels is specified, use a spatial
+        convolution instead of a smaller 1x1 convolution to change the
+        channels in the skip connection.
+    :param dims: determines if the signal is 1D, 2D, or 3D.
+    :param use_checkpoint: if True, use gradient checkpointing on this module.
+    :param up: if True, use this block for upsampling.
+    :param down: if True, use this block for downsampling.
+    """
+
+    def __init__(
+        self,
+        channels,
+        emb_channels,
+        dropout,
+        c_channels=3,
+        out_channels=None,
+        use_conv=False,
+        use_scale_shift_norm=False,
+        dims=2,
+        use_checkpoint=False,
+        up=False,
+        down=False,
+    ):
+        super().__init__()
+        self.channels = channels
+        self.emb_channels = emb_channels
+        self.dropout = dropout
+        self.out_channels = out_channels or channels
+        self.use_conv = use_conv
+        self.use_checkpoint = use_checkpoint
+        self.use_scale_shift_norm = use_scale_shift_norm
+
+        self.in_norm = SPADEGroupNorm(channels, c_channels)
+        self.in_layers = nn.Sequential(
+            nn.SiLU(),
+            conv_nd(dims, channels, self.out_channels, 3, padding=1),
+        )
+
+        self.updown = up or down
+
+        if up:
+            self.h_upd = Upsample(channels, False, dims)
+            self.x_upd = Upsample(channels, False, dims)
+        elif down:
+            self.h_upd = Downsample(channels, False, dims)
+            self.x_upd = Downsample(channels, False, dims)
+        else:
+            self.h_upd = self.x_upd = nn.Identity()
+
+        self.emb_layers = nn.Sequential(
+            nn.SiLU(),
+            linear(
+                emb_channels,
+                2 * self.out_channels if use_scale_shift_norm else self.out_channels,
+            ),
+        )
+        self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
+        self.out_layers = nn.Sequential(
+            nn.SiLU(),
+            nn.Dropout(p=dropout),
+            zero_module(
+                conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
+            ),
+        )
+
+        if self.out_channels == channels:
+            self.skip_connection = nn.Identity()
+        elif use_conv:
+            self.skip_connection = conv_nd(
+                dims, channels, self.out_channels, 3, padding=1
+            )
+        else:
+            self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
+
+    def forward(self, x, cond, emb):
+        """
+        Apply the block to a Tensor, conditioned on a timestep embedding.
+
+        :param x: an [N x C x ...] Tensor of features.
+        :param emb: an [N x emb_channels] Tensor of timestep embeddings.
+        :return: an [N x C x ...] Tensor of outputs.
+        """
+        return checkpoint(
+            self._forward, (x, cond, emb), self.parameters(), self.use_checkpoint
+        )
+
+    def _forward(self, x, cond, emb):
+
+        if self.updown:
+            in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
+            h = self.in_norm(x, cond)
+            h = in_rest(h)
+            h = self.h_upd(h)
+            x = self.x_upd(x)
+            h = in_conv(h)
+        else:
+            h = self.in_norm(x, cond)
+            h = self.in_layers(h)
+        emb_out = self.emb_layers(emb).type(h.dtype)
+        while len(emb_out.shape) < len(h.shape):
+            emb_out = emb_out[..., None]
+        if self.use_scale_shift_norm:
+            scale, shift = th.chunk(emb_out, 2, dim=1)
+            h = self.out_norm(h, cond) * (1 + scale) + shift
+            h = self.out_layers(h)
+        else:
+            h = h + emb_out
+            h = self.out_norm(h, cond)
+            h = self.out_layers(h)
+        return self.skip_connection(x) + h
+
 
 
 class AttentionBlock(nn.Module):
@@ -477,6 +656,7 @@ class UNetModel(nn.Module):
             if type(context_dim) == ListConfig:
                 context_dim = list(context_dim)
 
+        assert context_dim==1280, "Only 1280 context dim supported for now"
         if num_heads_upsample == -1:
             num_heads_upsample = num_heads
 
@@ -595,10 +775,11 @@ class UNetModel(nn.Module):
             #num_heads = 1
             dim_head = ch // num_heads if use_spatial_transformer else num_head_channels
         self.middle_block = TimestepEmbedSequential(
-            ResBlock(
+            SDMResBlock(
                 ch,
                 time_embed_dim,
                 dropout,
+                c_channels=num_classes,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
@@ -612,14 +793,15 @@ class UNetModel(nn.Module):
             ) if not use_spatial_transformer else SpatialTransformer(
                             ch, num_heads, dim_head, depth=transformer_depth, context_dim=context_dim
                         ),
-            ResBlock(
+            SDMResBlock(
                 ch,
                 time_embed_dim,
                 dropout,
+                c_channels=num_classes,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
-            ),
+            )
         )
         self._feature_size += ch
 
@@ -690,6 +872,8 @@ class UNetModel(nn.Module):
             conv_nd(dims, model_channels, n_embed, 1),
             #nn.LogSoftmax(dim=1)  # change to cross_entropy and produce non-normalized logits
         )
+            
+
 
     def convert_to_fp16(self):
         """
@@ -716,25 +900,45 @@ class UNetModel(nn.Module):
         :param y: an [N] Tensor of labels, if class-conditional.
         :return: an [N x C x ...] Tensor of outputs.
         """
+        self.attn=[]
         assert (y is not None) == (
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
+
         hs = []
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
         emb = self.time_embed(t_emb)
 
-        if self.num_classes is not None:
-            assert y.shape == (x.shape[0],)
-            emb = emb + self.label_emb(y)
+        # if self.num_classes is not None:
+        #     assert y.shape == (x.shape[0],)
+        #     emb = emb + self.label_emb(y)
 
         h = x.type(self.dtype)
         for module in self.input_blocks:
-            h = module(h, emb, context)
+            h = module(h, y, emb, context)
+
+            if isinstance(h,tuple):
+                attn=h[1]
+                h=h[0]
+                self.attn.append(attn)
+
             hs.append(h)
-        h = self.middle_block(h, emb, context)
+        h = self.middle_block(h, y, emb, context)
+
+        if isinstance(h,tuple):
+            attn=h[1]
+            h=h[0]
+            self.attn.append(attn)
+
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
+            h = module(h, y, emb, context)
+
+            if isinstance(h,tuple):
+                attn=h[1]
+                h=h[0]
+                self.attn.append(attn)
+
         h = h.type(x.dtype)
         if self.predict_codebook_ids:
             return self.id_predictor(h)

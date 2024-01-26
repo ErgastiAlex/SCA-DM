@@ -1,0 +1,31 @@
+# Ignore compiled Python files
+*.pyc
+
+# Ignore virtual environment
+venv/
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore logs
+*.log
+
+# Ignore package build directory
+dist/
+
+# Ignore cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore environment-specific files
+.env
+.env.*
+
+logs/
+logs_no_attn_loss
+models/
+*.sh
+*.txt
+outputs/

@@ -8,6 +8,7 @@ https://github.com/CompVis/taming-transformers
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import pytorch_lightning as pl
 from torch.optim.lr_scheduler import LambdaLR
@@ -24,6 +25,7 @@ from ldm.modules.distributions.distributions import normal_kl, DiagonalGaussianD
 from ldm.models.autoencoder import VQModelInterface, IdentityFirstStage, AutoencoderKL
 from ldm.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
 from ldm.models.diffusion.ddim import DDIMSampler
+from einops import rearrange, repeat
 
 
 __conditioning_keys__ = {'concat': 'c_concat',
@@ -109,7 +111,7 @@ class DDPM(pl.LightningModule):
         self.loss_type = loss_type
 
         self.learn_logvar = learn_logvar
-        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
+        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,)).cuda()
         if self.learn_logvar:
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
 
@@ -434,6 +436,8 @@ class LatentDiffusion(DDPM):
                  conditioning_key=None,
                  scale_factor=1.0,
                  scale_by_std=False,
+                 attn_loss_weight=0.,
+                 probability_of_discard=0.,
                  *args, **kwargs):
         self.num_timesteps_cond = default(num_timesteps_cond, 1)
         self.scale_by_std = scale_by_std
@@ -467,6 +471,11 @@ class LatentDiffusion(DDPM):
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path, ignore_keys)
             self.restarted_from_ckpt = True
+
+
+        self.bce=nn.BCEWithLogitsLoss()
+        self.attn_loss_weight = attn_loss_weight
+        self.probability_of_discard = probability_of_discard
 
     def make_cond_schedule(self, ):
         self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
@@ -548,17 +557,8 @@ class LatentDiffusion(DDPM):
             raise NotImplementedError(f"encoder_posterior of type '{type(encoder_posterior)}' not yet implemented")
         return self.scale_factor * z
 
-    def get_learned_conditioning(self, c):
-        if self.cond_stage_forward is None:
-            if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
-                c = self.cond_stage_model.encode(c)
-                if isinstance(c, DiagonalGaussianDistribution):
-                    c = c.mode()
-            else:
-                c = self.cond_stage_model(c)
-        else:
-            assert hasattr(self.cond_stage_model, self.cond_stage_forward)
-            c = getattr(self.cond_stage_model, self.cond_stage_forward)(c)
+    def get_learned_conditioning(self, x, c):
+        c = self.cond_stage_model(x,c)
         return c
 
     def meshgrid(self, h, w):
@@ -650,56 +650,44 @@ class LatentDiffusion(DDPM):
 
         return fold, unfold, normalization, weighting
 
+        
+
     @torch.no_grad()
     def get_input(self, batch, k, return_first_stage_outputs=False, force_c_encode=False,
                   cond_key=None, return_original_cond=False, bs=None):
+        
         x = super().get_input(batch, k)
         if bs is not None:
             x = x[:bs]
         x = x.to(self.device)
+
         encoder_posterior = self.encode_first_stage(x)
         z = self.get_first_stage_encoding(encoder_posterior).detach()
 
+        assert self.model.conditioning_key is not None, "model must have a conditioning key"
+
+        one_hot_label=None
         if self.model.conditioning_key is not None:
-            if cond_key is None:
-                cond_key = self.cond_stage_key
-            if cond_key != self.first_stage_key:
-                if cond_key in ['caption', 'coordinates_bbox']:
-                    xc = batch[cond_key]
-                elif cond_key == 'class_label':
-                    xc = batch
-                else:
-                    xc = super().get_input(batch, cond_key).to(self.device)
-            else:
-                xc = x
-            if not self.cond_stage_trainable or force_c_encode:
-                if isinstance(xc, dict) or isinstance(xc, list):
-                    # import pudb; pudb.set_trace()
-                    c = self.get_learned_conditioning(xc)
-                else:
-                    c = self.get_learned_conditioning(xc.to(self.device))
-            else:
-                c = xc
-            if bs is not None:
-                c = c[:bs]
+            assert self.cond_stage_trainable!=False, "cond_stage_trainable must be True to use conditioning"
 
-            if self.use_positional_encodings:
-                pos_x, pos_y = self.compute_latent_shifts(batch)
-                ckey = __conditioning_keys__[self.model.conditioning_key]
-                c = {ckey: c, 'pos_x': pos_x, 'pos_y': pos_y}
-
-        else:
-            c = None
-            xc = None
-            if self.use_positional_encodings:
-                pos_x, pos_y = self.compute_latent_shifts(batch)
-                c = {'pos_x': pos_x, 'pos_y': pos_y}
-        out = [z, c]
+            one_hot_label=F.one_hot(batch["label"].to(torch.int64),self.model.diffusion_model.num_classes).permute(0,3,1,2).float().to(self.device) 
+        
+        if self.probability_of_discard > 0.:
+            # generate rnd
+            rnd = torch.rand(z.shape[0], device=z.device)
+            # get mask
+            mask = rnd < self.probability_of_discard
+            # get indices of mask
+            idx = torch.where(mask)[0]
+            # generate new z
+            x[idx] = torch.zeros_like(x[idx])
+        
+        out = [z, x, one_hot_label]
+        
         if return_first_stage_outputs:
             xrec = self.decode_first_stage(z)
             out.extend([x, xrec])
-        if return_original_cond:
-            out.append(xc)
+
         return out
 
     @torch.no_grad()
@@ -863,20 +851,19 @@ class LatentDiffusion(DDPM):
             return self.first_stage_model.encode(x)
 
     def shared_step(self, batch, **kwargs):
-        x, c = self.get_input(batch, self.first_stage_key)
-        loss = self(x, c)
+        z, c, one_hot_label = self.get_input(batch, self.first_stage_key)
+        loss = self(z, c, one_hot_label)
         return loss
 
-    def forward(self, x, c, *args, **kwargs):
+    def forward(self, x, c, one_hot_label, *args, **kwargs):
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
         if self.model.conditioning_key is not None:
             assert c is not None
             if self.cond_stage_trainable:
-                c = self.get_learned_conditioning(c)
-            if self.shorten_cond_schedule:  # TODO: drop this option
-                tc = self.cond_ids[t].to(self.device)
-                c = self.q_sample(x_start=c, t=tc, noise=torch.randn_like(c.float()))
-        return self.p_losses(x, c, t, *args, **kwargs)
+                c = self.get_learned_conditioning(c, one_hot_label)
+
+        cond={"context":c,"y":one_hot_label}
+        return self.p_losses(x, cond, t, *args, **kwargs)
 
     def _rescale_annotations(self, bboxes, crop_coordinates):  # TODO: move to dataset
         def rescale_bbox(bbox):
@@ -1041,6 +1028,37 @@ class LatentDiffusion(DDPM):
         loss_dict.update({f'{prefix}/loss_vlb': loss_vlb})
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
+
+
+        attentions=self.model.diffusion_model.attn
+        label=cond["y"]
+
+        loss_attn=0
+
+        if self.attn_loss_weight>0:
+            for attn in attentions:
+                b,d,c=attn.shape
+                h=int(np.sqrt(d))
+                attn=rearrange(attn,"(b1 head) (height width) c-> b1 head c height width",b1=model_output.shape[0],height=h)
+
+                attn=torch.mean(attn,dim=1) # b c h w
+                print(attn.shape)
+                h,w=attn.shape[-2:]
+
+                mask_resized=F.interpolate(label.float(),size=(h,w),mode='nearest')
+
+                loss = 0
+                count= 0
+
+                for i in range(attn.shape[1]):
+                    loss += self.bce(attn[:, i], mask_resized[:, i])
+                    count += 1
+
+                loss_attn += loss / count
+
+            loss_dict.update({f'{prefix}/loss_attn': loss_attn})
+
+            loss += loss_attn*self.attn_loss_weight
 
         return loss, loss_dict
 
@@ -1249,58 +1267,31 @@ class LatentDiffusion(DDPM):
 
     @torch.no_grad()
     def log_images(self, batch, N=8, n_row=4, sample=True, ddim_steps=200, ddim_eta=1., return_keys=None,
-                   quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=True,
+                   quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=False,
                    plot_diffusion_rows=True, **kwargs):
 
         use_ddim = ddim_steps is not None
 
         log = dict()
-        z, c, x, xrec, xc = self.get_input(batch, self.first_stage_key,
+        z, c, one_hot_label, x, xrec = self.get_input(batch, self.first_stage_key,
                                            return_first_stage_outputs=True,
                                            force_c_encode=True,
                                            return_original_cond=True,
                                            bs=N)
+
+        c = self.get_learned_conditioning(c, one_hot_label)
+        cond={"context":c,"y":one_hot_label}
+
         N = min(x.shape[0], N)
         n_row = min(x.shape[0], n_row)
+
         log["inputs"] = x
         log["reconstruction"] = xrec
-        if self.model.conditioning_key is not None:
-            if hasattr(self.cond_stage_model, "decode"):
-                xc = self.cond_stage_model.decode(c)
-                log["conditioning"] = xc
-            elif self.cond_stage_key in ["caption"]:
-                xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["caption"])
-                log["conditioning"] = xc
-            elif self.cond_stage_key == 'class_label':
-                xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["human_label"])
-                log['conditioning'] = xc
-            elif isimage(xc):
-                log["conditioning"] = xc
-            if ismap(xc):
-                log["original_conditioning"] = self.to_rgb(xc)
-
-        if plot_diffusion_rows:
-            # get diffusion row
-            diffusion_row = list()
-            z_start = z[:n_row]
-            for t in range(self.num_timesteps):
-                if t % self.log_every_t == 0 or t == self.num_timesteps - 1:
-                    t = repeat(torch.tensor([t]), '1 -> b', b=n_row)
-                    t = t.to(self.device).long()
-                    noise = torch.randn_like(z_start)
-                    z_noisy = self.q_sample(x_start=z_start, t=t, noise=noise)
-                    diffusion_row.append(self.decode_first_stage(z_noisy))
-
-            diffusion_row = torch.stack(diffusion_row)  # n_log_step, n_row, C, H, W
-            diffusion_grid = rearrange(diffusion_row, 'n b c h w -> b n c h w')
-            diffusion_grid = rearrange(diffusion_grid, 'b n c h w -> (b n) c h w')
-            diffusion_grid = make_grid(diffusion_grid, nrow=diffusion_row.shape[0])
-            log["diffusion_row"] = diffusion_grid
 
         if sample:
             # get denoise row
             with self.ema_scope("Plotting"):
-                samples, z_denoise_row = self.sample_log(cond=c,batch_size=N,ddim=use_ddim,
+                samples, z_denoise_row = self.sample_log(cond=cond,batch_size=N,ddim=use_ddim,
                                                          ddim_steps=ddim_steps,eta=ddim_eta)
                 # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True)
             x_samples = self.decode_first_stage(samples)
@@ -1313,7 +1304,7 @@ class LatentDiffusion(DDPM):
                     self.first_stage_model, IdentityFirstStage):
                 # also display when quantizing x0 while sampling
                 with self.ema_scope("Plotting Quantized Denoised"):
-                    samples, z_denoise_row = self.sample_log(cond=c,batch_size=N,ddim=use_ddim,
+                    samples, z_denoise_row = self.sample_log(cond=cond,batch_size=N,ddim=use_ddim,
                                                              ddim_steps=ddim_steps,eta=ddim_eta,
                                                              quantize_denoised=True)
                     # samples, z_denoise_row = self.sample(cond=c, batch_size=N, return_intermediates=True,
@@ -1321,31 +1312,9 @@ class LatentDiffusion(DDPM):
                 x_samples = self.decode_first_stage(samples.to(self.device))
                 log["samples_x0_quantized"] = x_samples
 
-            if inpaint:
-                # make a simple center square
-                b, h, w = z.shape[0], z.shape[2], z.shape[3]
-                mask = torch.ones(N, h, w).to(self.device)
-                # zeros will be filled in
-                mask[:, h // 4:3 * h // 4, w // 4:3 * w // 4] = 0.
-                mask = mask[:, None, ...]
-                with self.ema_scope("Plotting Inpaint"):
-
-                    samples, _ = self.sample_log(cond=c,batch_size=N,ddim=use_ddim, eta=ddim_eta,
-                                                ddim_steps=ddim_steps, x0=z[:N], mask=mask)
-                x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_inpainting"] = x_samples
-                log["mask"] = mask
-
-                # outpaint
-                with self.ema_scope("Plotting Outpaint"):
-                    samples, _ = self.sample_log(cond=c, batch_size=N, ddim=use_ddim,eta=ddim_eta,
-                                                ddim_steps=ddim_steps, x0=z[:N], mask=mask)
-                x_samples = self.decode_first_stage(samples.to(self.device))
-                log["samples_outpainting"] = x_samples
-
         if plot_progressive_rows:
             with self.ema_scope("Plotting Progressives"):
-                img, progressives = self.progressive_denoising(c,
+                img, progressives = self.progressive_denoising(cond,
                                                                shape=(self.channels, self.image_size, self.image_size),
                                                                batch_size=N)
             prog_row = self._get_denoise_row_from_list(progressives, desc="Progressive Generation")
@@ -1399,25 +1368,29 @@ class DiffusionWrapper(pl.LightningModule):
         self.conditioning_key = conditioning_key
         assert self.conditioning_key in [None, 'concat', 'crossattn', 'hybrid', 'adm']
 
-    def forward(self, x, t, c_concat: list = None, c_crossattn: list = None):
-        if self.conditioning_key is None:
-            out = self.diffusion_model(x, t)
-        elif self.conditioning_key == 'concat':
-            xc = torch.cat([x] + c_concat, dim=1)
-            out = self.diffusion_model(xc, t)
-        elif self.conditioning_key == 'crossattn':
-            cc = torch.cat(c_crossattn, 1)
-            out = self.diffusion_model(x, t, context=cc)
-        elif self.conditioning_key == 'hybrid':
-            xc = torch.cat([x] + c_concat, dim=1)
-            cc = torch.cat(c_crossattn, 1)
-            out = self.diffusion_model(xc, t, context=cc)
-        elif self.conditioning_key == 'adm':
-            cc = c_crossattn[0]
-            out = self.diffusion_model(x, t, y=cc)
+    def forward(self, x, t, y=None, context=None):
+        # if self.conditioning_key is None:
+        #     out = self.diffusion_model(x, t)
+        # elif self.conditioning_key == 'concat':
+        #     xc = torch.cat([x] + c_concat, dim=1)
+        #     out = self.diffusion_model(xc, t)
+        # elif self.conditioning_key == 'crossattn':
+        #     cc = torch.cat(c_crossattn, 1)
+        #     out = self.diffusion_model(x, t, context=cc)
+        # elif self.conditioning_key == 'hybrid':
+        #     xc = torch.cat([x] + c_concat, dim=1)
+        #     cc = torch.cat(c_crossattn, 1)
+        #     out = self.diffusion_model(xc, t, context=cc)
+        # elif self.conditioning_key == 'adm':
+        #     cc = c_crossattn[0]
+        #     out = self.diffusion_model(x, t, y=cc)
+        # else:
+        #     raise NotImplementedError()
+        if self.conditioning_key=="crossattn":
+            out=self.diffusion_model(x,t,context=context,y=y)
         else:
             raise NotImplementedError()
-
+        
         return out
 
 
