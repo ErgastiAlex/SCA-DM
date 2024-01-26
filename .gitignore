@@ -25,6 +25,7 @@ __pycache__/
 
 logs/
 logs_no_attn_loss
+logs_*/
 models/
 *.sh
 *.txt
