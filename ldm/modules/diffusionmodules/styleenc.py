@@ -57,9 +57,7 @@ class MultiScaleEffStyleEncoder(nn.Module):
                 
         self.eps = 1e-5
     
-    def forward(self, x, mask):    
-        mask=mask[:,1:,:,:] #exclude bg
-        
+    def forward(self, x, mask):
         x = self.Encoder['first_layer'](x)
 
         enc_feat = []

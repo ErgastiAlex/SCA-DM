@@ -90,7 +90,7 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock, CondTimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, cond, emb, context=None):
+    def forward(self, x, cond, emb, context=None, use_mask_attn=False):
         attn=None
         for layer in self:
             if isinstance(layer, CondTimestepBlock):
@@ -98,7 +98,10 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock, CondTimestepBlock):
             elif isinstance(layer, TimestepBlock):
                 x = layer(x, emb)
             elif isinstance(layer, SpatialTransformer):
-                x = layer(x, context)
+                if use_mask_attn:
+                    x = layer(x, context, cond)
+                else:
+                    x = layer(x,context)
                 if isinstance(x,tuple):
                     x, attn = x
             else:
@@ -645,6 +648,7 @@ class UNetModel(nn.Module):
         context_dim=None,                 # custom transformer support
         n_embed=None,                     # custom support for prediction of discrete ids into codebook of first stage vq model
         legacy=True,
+        use_mask_attn=False
     ):
         super().__init__()
         if use_spatial_transformer:
@@ -682,6 +686,7 @@ class UNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
         self.predict_codebook_ids = n_embed is not None
+        self.use_mask_attn = use_mask_attn
 
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
@@ -917,7 +922,7 @@ class UNetModel(nn.Module):
 
         h = x.type(self.dtype)
         for module in self.input_blocks:
-            h = module(h, y, emb, context)
+            h = module(h, y, emb, context, self.use_mask_attn)
 
             if isinstance(h,tuple):
                 attn=h[1]
@@ -925,7 +930,7 @@ class UNetModel(nn.Module):
                 self.attn.append(attn)
 
             hs.append(h)
-        h = self.middle_block(h, y, emb, context)
+        h = self.middle_block(h, y, emb, context, self.use_mask_attn)
 
         if isinstance(h,tuple):
             attn=h[1]
@@ -934,7 +939,7 @@ class UNetModel(nn.Module):
 
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, y, emb, context)
+            h = module(h, y, emb, context, self.use_mask_attn)
 
             if isinstance(h,tuple):
                 attn=h[1]

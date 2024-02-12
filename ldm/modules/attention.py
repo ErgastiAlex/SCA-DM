@@ -172,7 +172,7 @@ class CrossAttention(nn.Module):
 
         q = self.to_q(x)
         
-        return_attn=context is None
+        no_return_attn=context is None
         context = default(context, x)
         k = self.to_k(context)
         v = self.to_v(context)
@@ -181,21 +181,37 @@ class CrossAttention(nn.Module):
 
         sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
 
-        if exists(mask):
-            mask = rearrange(mask, 'b ... -> b (...)')
-            max_neg_value = -torch.finfo(sim.dtype).max
-            mask = repeat(mask, 'b j -> (b h) () j', h=h)
-            sim.masked_fill_(~mask, max_neg_value)
-
         # attention, what we cannot get enough of
-        attn = sim.softmax(dim=-1)
+    
+        attn=sim
+        
+        if exists(mask):
+            attn = attn.view(attn.size(0)//h, h, int(math.sqrt(attn.size(1))), int(math.sqrt(attn.size(1))), attn.size(2))
+            attn = attn.permute(0, 1, 4, 2, 3)
+
+            #mask = self.g_blur(mask)
+            mask = nn.functional.interpolate(mask, size=(attn.size(3), attn.size(4)), mode='nearest')
+            attn_2 = attn.clone()
+            max_neg_value = -torch.finfo(sim.dtype).max
+
+            for i in range(attn.size(2)):
+                att_i = attn[:, :, i].unsqueeze(2).clone()
+                m_i = torch.repeat_interleave(mask[:, i].unsqueeze(1), h, dim=1).unsqueeze(2)
+                attn_2[:, :, i] = (att_i*m_i).squeeze(2)
+                attn_2[attn_2 == 0] = max_neg_value
+
+            attn = attn_2
+            attn = attn.permute(0, 1, 3, 4, 2)
+            attn = attn.view(attn.size(0)*h, attn.size(2)*attn.size(3), attn.size(4))
+
+        attn = attn.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', attn, v)
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
 
-        if return_attn:
+        if no_return_attn:
             return self.to_out(out)
-        return self.to_out(out), attn
+        return self.to_out(out), sim.clone()
 
 
 class BasicTransformerBlock(nn.Module):
@@ -210,13 +226,16 @@ class BasicTransformerBlock(nn.Module):
         self.norm3 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
-    def forward(self, x, context=None):
-        return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
+    def forward(self, x, context=None, mask=None):
+        if exists(mask):
+            return checkpoint(self._forward, (x, context, mask), self.parameters(), self.checkpoint)
+        else:
+            return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
 
-    def _forward(self, x, context=None):
+    def _forward(self, x, context=None, mask=None):
         x = self.attn1(self.norm1(x)) + x
 
-        out = self.attn2(self.norm2(x), context=context)
+        out = self.attn2(self.norm2(x), context=context, mask=mask)
         out, attn2 = out
 
         x = out + x
@@ -257,7 +276,7 @@ class SpatialTransformer(nn.Module):
                                               stride=1,
                                               padding=0))
 
-    def forward(self, x, context=None):
+    def forward(self, x, context=None, mask=None):
         # note: if no context is given, cross-attention defaults to self-attention
         attn=None
         b, c, h, w = x.shape
@@ -266,7 +285,7 @@ class SpatialTransformer(nn.Module):
         x = self.proj_in(x)
         x = rearrange(x, 'b c h w -> b (h w) c')
         for block in self.transformer_blocks:
-            x = block(x, context=context)
+            x = block(x, context=context, mask=mask)
             if isinstance(x, tuple):
                 x, attn = x
         x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w)

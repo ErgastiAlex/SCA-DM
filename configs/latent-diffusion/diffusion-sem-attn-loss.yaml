@@ -13,7 +13,8 @@ model:
     monitor: val/loss_simple_ema
     conditioning_key: "crossattn"
     cond_stage_trainable: True 
-    attn_loss_weight: 1
+    attn_loss_weight: 0.01
+    probability_of_discard: 0
 
     cond_stage_config:
       target: ldm.modules.diffusionmodules.styleenc.MultiScaleEffStyleEncoder
@@ -48,7 +49,7 @@ model:
         num_head_channels: 32
         use_spatial_transformer: True
         context_dim: 1280
-        num_classes: 20
+        num_classes: 19
 
     first_stage_config:
       target: ldm.models.autoencoder.VQModelInterface

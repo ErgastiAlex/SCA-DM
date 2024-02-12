@@ -437,6 +437,7 @@ class LatentDiffusion(DDPM):
                  scale_factor=1.0,
                  scale_by_std=False,
                  attn_loss_weight=0.,
+                 attn_l2=False,
                  probability_of_discard=0.,
                  *args, **kwargs):
         self.num_timesteps_cond = default(num_timesteps_cond, 1)
@@ -475,6 +476,7 @@ class LatentDiffusion(DDPM):
 
         self.bce=nn.BCEWithLogitsLoss()
         self.attn_loss_weight = attn_loss_weight
+        self.attn_l2=attn_l2
         self.probability_of_discard = probability_of_discard
 
     def make_cond_schedule(self, ):
@@ -1033,7 +1035,7 @@ class LatentDiffusion(DDPM):
         attentions=self.model.diffusion_model.attn
         label=cond["y"]
 
-        loss_attn=0
+        loss_attn_acc=0
 
         if self.attn_loss_weight>0:
             for attn in attentions:
@@ -1042,23 +1044,26 @@ class LatentDiffusion(DDPM):
                 attn=rearrange(attn,"(b1 head) (height width) c-> b1 head c height width",b1=model_output.shape[0],height=h)
 
                 attn=torch.mean(attn,dim=1) # b c h w
-                print(attn.shape)
                 h,w=attn.shape[-2:]
 
                 mask_resized=F.interpolate(label.float(),size=(h,w),mode='nearest')
 
-                loss = 0
-                count= 0
+                if self.attn_l2==False:
+                    loss_attn = 0
+                    count = 0
 
-                for i in range(attn.shape[1]):
-                    loss += self.bce(attn[:, i], mask_resized[:, i])
-                    count += 1
+                    for i in range(attn.shape[1]):
+                        loss_attn += self.bce(attn[:, i].unsqueeze(1), mask_resized[:, i].unsqueeze(1))
+                        count += 1
 
-                loss_attn += loss / count
+                    loss_attn_acc += loss_attn / count
+                else:
+                    #use MSE loss
+                    loss_attn_acc += F.mse_loss(attn,mask_resized)
 
-            loss_dict.update({f'{prefix}/loss_attn': loss_attn})
+            loss_dict.update({f'{prefix}/loss_attn': loss_attn_acc*self.attn_loss_weight})
 
-            loss += loss_attn*self.attn_loss_weight
+            loss += loss_attn_acc*self.attn_loss_weight
 
         return loss, loss_dict
 

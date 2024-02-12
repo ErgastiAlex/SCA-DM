@@ -12,7 +12,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
-label_list = ['skin', 'nose', 'eye_g', 'l_eye', 'r_eye', 'l_brow', 'r_brow', 'l_ear', 'r_ear', 'mouth',
+label_list = ['bg', 'skin', 'nose', 'eye_g', 'l_eye', 'r_eye', 'l_brow', 'r_brow', 'l_ear', 'r_ear', 'mouth',
         'u_lip', 'l_lip', 'hair', 'hat', 'ear_r', 'neck_l', 'neck', 'cloth']
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -156,7 +156,8 @@ if __name__ == "__main__":
     config = OmegaConf.load("configs/latent-diffusion/diffusion-sem.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
     # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-01-17T14-33-09_diffusion-sem/checkpoints/epoch=000039.ckpt")  # TODO: check path
     # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-01-22T10-48-09_diffusion-sem/checkpoints/epoch=000040.ckpt")  # TODO: check path
-    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs_no_attn_loss/2024-01-17T14-33-09_diffusion-sem/checkpoints/last.ckpt")  # TODO: check path
+    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs_old/2024-01-17T14-33-09_no_attn/checkpoints/last.ckpt")  # TODO: check path
+    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-01-26T09-36-36_no_attn_loss/checkpoints/last.ckpt")  # TODO: check path
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
@@ -214,9 +215,9 @@ if __name__ == "__main__":
                 # src_c=target_c
                 # src_c=torch.randn_like(src_c)
                 for i in opt.index_body_part:
-                    # src_c[:,i,:]=target_c[:,i,:]
-                    src_c[:,i,:]=torch.randn_like(src_c[:,i,:])
-                src_c=target_c
+                    src_c[:,i,:]=target_c[:,i,:]
+                #     src_c[:,i,:]=torch.randn_like(src_c[:,i,:])
+                # src_c=target_c
                 cond={"context":src_c, "y":src_label}
                 shape = [3, opt.H//4, opt.W//4]
                 samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
@@ -248,7 +249,7 @@ if __name__ == "__main__":
     for i in opt.index_body_part:
         name+=label_list[i]+"_"
     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-    Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'rnd{opt.source_img_name[0]}_{opt.target_img_name[0]}.png'))
+    Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'{name}_{opt.source_img_name[0]}_{opt.target_img_name[0]}.png'))
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \nEnjoy.")
 

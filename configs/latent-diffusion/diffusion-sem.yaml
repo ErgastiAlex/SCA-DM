@@ -14,7 +14,8 @@ model:
     conditioning_key: "crossattn"
     cond_stage_trainable: True 
     attn_loss_weight: 0
-
+    probability_of_discard: 0
+    
     cond_stage_config:
       target: ldm.modules.diffusionmodules.styleenc.MultiScaleEffStyleEncoder
       params:
@@ -48,7 +49,7 @@ model:
         num_head_channels: 32
         use_spatial_transformer: True
         context_dim: 1280
-        num_classes: 20
+        num_classes: 19
 
     first_stage_config:
       target: ldm.models.autoencoder.VQModelInterface
@@ -103,11 +104,11 @@ lightning:
     image_logger:
       target: main.ImageLogger
       params:
-        batch_frequency: 100
+        batch_frequency: 1000
         max_images: 8
         increase_log_steps: False
 
   trainer:
     benchmark: True
     accumulate_grad_batches: 6
-    max_epochs: 200
+    max_epochs: 500
