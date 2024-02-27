@@ -129,8 +129,10 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
 
-    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test-sdm.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
-    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-12T14-39-25_mask-attn/checkpoints/epoch=000235.ckpt") 
+    # config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test-sdm.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-12T14-39-25_mask-attn/checkpoints/epoch=000235.ckpt") 
+    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    model = load_model_from_config(config, "/hpc/archive/G_VBD/alex.ergasti/LDM-diffusion-sem/logs/logs/2024-02-12T14-39-25_mask-attn/checkpoints/epoch=000235.ckpt") 
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
