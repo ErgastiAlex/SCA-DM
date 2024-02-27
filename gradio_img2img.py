@@ -33,13 +33,17 @@ def load_model_from_config(config, ckpt, verbose=False):
 
 # Placeholder for your neural network (replace with your actual model)
 def load_neural_network():
-    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-attn-l2-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
-    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-06T18-32-21_with_uc-attn-l2/checkpoints/last.ckpt") 
+    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-attn-loss-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-07T07-41-27_with_uc-attn/checkpoints/last.ckpt")
+    # config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-12T14-39-25_mask-attn/checkpoints/epoch=000235.ckpt")
+    # config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-attn-l2-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-06T18-32-21_with_uc-attn-l2/checkpoints/last.ckpt")
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
 
-    sampler = DDIMSampler(model)    
+    sampler = DDIMSampler(model)
     return sampler
 
 # Function to initialize the model if not already initialized
@@ -65,7 +69,7 @@ def load_image_and_label(img_path, h, w):
     label = np.array(label).astype(np.uint8)
     label = torch.from_numpy(label).to(torch.int64)
     label = F.one_hot(label, num_classes=20).unsqueeze(0).permute(0, 3, 1, 2).float()
-    
+
     return torch.from_numpy(im[np.newaxis, ...]).cuda(), label.cuda()
 
 
@@ -73,14 +77,7 @@ def sample(src_img, target_img, src_label, target_label, index_body_part, scale,
     global sampler
 
     n_samples=1
-    uc = None
-    if scale != 1.0:
-        # TODO: Use zero image or pass a zero vector to the model?
-        # uc = model.get_learned_conditioning(opt.n_samples * [""])
-        uc=torch.zeros(n_samples, 19, 1280).cuda()
 
-        uc={"context":torch.zeros(n_samples, 19, 1280).cuda(), 
-            "y":torch.zeros(n_samples, 19, 256,256).cuda()}
     model=sampler.model
 
     src_c =  model.get_learned_conditioning(src_img, src_label)
@@ -88,7 +85,16 @@ def sample(src_img, target_img, src_label, target_label, index_body_part, scale,
 
     for i in index_body_part:
         src_c[:,i,:]=target_c[:,i,:]
-    
+
+    uc = None
+    if scale != 1.0:
+        # TODO: Use zero image or pass a zero vector to the model?
+        # uc = model.get_learned_conditioning(opt.n_samples * [""])
+
+        uc={"context":torch.zeros(n_samples, 19, 1280).cuda(),
+            # "y":src_label
+            "y":torch.zeros(n_samples, 19, 256,256).cuda()}
+
     cond={"context":src_c, "y":src_label}
     shape = [3, 256//4, 256//4]
     samples_ddim, _ = sampler.sample(S=ddim_steps,
@@ -126,7 +132,7 @@ def transform_label(label):
     return label
 
 # Your image processing and neural network inference logic
-def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps):
+def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps, empty_style):
     src_img_path=os.path.join("/home/datasets/CelebA-HQ/test/images/", src_img_name+".jpg")
     target_img_path=os.path.join("/home/datasets/CelebA-HQ/test/images/",target_img_name+".jpg")
     src_img=Image.open(src_img_path)
@@ -136,7 +142,7 @@ def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps):
     target_mask_path=os.path.join("/home/datasets/CelebA-HQ/test/labels/", target_img_name+".png")
     src_mask=Image.open(src_mask_path)
     target_mask=Image.open(target_mask_path)
-    
+
 
     src_img = transform_img(src_img).cuda()
     target_img = transform_img(target_img).cuda()
@@ -144,14 +150,16 @@ def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps):
     src_mask = transform_label(src_mask).cuda()
     target_mask = transform_label(target_mask).cuda()
 
-
-    predictions = sample(src_img, target_img, src_mask, target_mask, body_part, s, ddim_steps)
-
+    if empty_style==True:
+        predictions = sample(torch.zeros(src_img.shape).cuda(), target_img, src_mask, target_mask, body_part, s, ddim_steps)
+    else:
+        predictions = sample(src_img, target_img, src_mask, target_mask, body_part, s, ddim_steps)
+        
     src_img    = torch.clamp((src_img+1.0)/2.0, min=0.0, max=1.0)
     target_img = torch.clamp((target_img+1.0)/2.0, min=0.0, max=1.0)
     return (
             src_img.detach().cpu().squeeze(0).permute(1,2,0).numpy(),
-            target_img.detach().cpu().squeeze(0).permute(1,2,0).numpy(), 
+            target_img.detach().cpu().squeeze(0).permute(1,2,0).numpy(),
             predictions.detach().cpu().squeeze(0).permute(1,2,0).numpy()
         )
 
@@ -169,6 +177,7 @@ iface = gr.Interface(
         ),
         gr.Slider(minimum=1, maximum=7.5, label="s"),
         gr.Slider(minimum=50, maximum=200, label="DDIM Step"),
+        gr.Checkbox(label="Empty style"),
     ],
     outputs=[
         gr.Image(type="numpy", label="Input1",width=256),
