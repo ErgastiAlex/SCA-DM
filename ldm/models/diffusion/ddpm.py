@@ -73,6 +73,7 @@ class DDPM(pl.LightningModule):
                  use_positional_encodings=False,
                  learn_logvar=False,
                  logvar_init=0.,
+                 cityscape=False,
                  ):
         super().__init__()
         assert parameterization in ["eps", "x0"], 'currently only supporting "eps" and "x0"'
@@ -83,6 +84,7 @@ class DDPM(pl.LightningModule):
         self.log_every_t = log_every_t
         self.first_stage_key = first_stage_key
         self.image_size = image_size  # try conv?
+        self.cityscape=cityscape
         self.channels = channels
         self.use_positional_encodings = use_positional_encodings
         self.model = DiffusionWrapper(unet_config, conditioning_key)
@@ -1033,6 +1035,7 @@ class LatentDiffusion(DDPM):
 
 
         attentions=self.model.diffusion_model.attn
+        
         label=cond["y"]
 
         loss_attn_acc=0
@@ -1259,7 +1262,10 @@ class LatentDiffusion(DDPM):
 
         if ddim:
             ddim_sampler = DDIMSampler(self)
-            shape = (self.channels, self.image_size, self.image_size)
+            if self.cityscape:
+                shape = (self.channels, self.image_size, self.image_size*2)
+            else:
+                shape = (self.channels, self.image_size, self.image_size)
             samples, intermediates =ddim_sampler.sample(ddim_steps,batch_size,
                                                         shape,cond,verbose=False,**kwargs)
 
