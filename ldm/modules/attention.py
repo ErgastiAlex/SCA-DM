@@ -183,10 +183,18 @@ class CrossAttention(nn.Module):
 
         # attention, what we cannot get enough of
     
-        attn=sim
+        attn=sim.clone()
         
         if exists(mask):
-            attn = attn.view(attn.size(0)//h, h, int(math.sqrt(attn.size(1))), int(math.sqrt(attn.size(1))), attn.size(2))
+            height,width=mask.shape[-2],mask.shape[-1]
+            size=attn.size(1)
+            
+            while height*width!=size:
+                height=height//2
+                width=width//2
+
+
+            attn = attn.view(attn.size(0)//h, h, height, width, attn.size(2))
             attn = attn.permute(0, 1, 4, 2, 3)
 
             #mask = self.g_blur(mask)
@@ -211,7 +219,7 @@ class CrossAttention(nn.Module):
 
         if no_return_attn:
             return self.to_out(out)
-        return self.to_out(out), sim.clone()
+        return self.to_out(out), sim
 
 
 class BasicTransformerBlock(nn.Module):
