@@ -189,6 +189,7 @@ class CrossAttention(nn.Module):
             height,width=mask.shape[-2],mask.shape[-1]
             size=attn.size(1)
             
+            print(height,width)
             while height*width!=size:
                 height=height//2
                 width=width//2
