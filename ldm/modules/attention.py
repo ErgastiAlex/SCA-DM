@@ -189,13 +189,9 @@ class CrossAttention(nn.Module):
             height,width=mask.shape[-2],mask.shape[-1]
             size=attn.size(1)
             
-            print(height,width, flush=True)
-            print(size, flush=True)
-            print("------------", flush=True)
             while height*width!=size:
                 height=height//2
                 width=width//2
-                print(height,width, flush=True)
 
             attn = attn.view(attn.size(0)//h, h, height, width, attn.size(2))
             attn = attn.permute(0, 1, 4, 2, 3)
