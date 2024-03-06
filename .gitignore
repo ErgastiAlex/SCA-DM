@@ -33,3 +33,12 @@ outputs/
 configs/
 *.sh
 *.bash
+*.jpg
+*.png
+
+*log/
+*logs/
+log*/
+logs*/
+*.out
+output/
