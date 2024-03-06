@@ -91,9 +91,12 @@ def sample(src_img, target_img, src_label, target_label, index_body_part, scale,
         # TODO: Use zero image or pass a zero vector to the model?
         # uc = model.get_learned_conditioning(opt.n_samples * [""])
 
-        uc={"context":torch.zeros(n_samples, 19, 1280).cuda(),
+        uc = {"context":torch.zeros(n_samples, 19, 1280).cuda(),
             # "y":src_label
-            "y":torch.zeros(n_samples, 19, 256,256).cuda()}
+            "y":torch.zeros(n_samples, 19, 256,256).cuda()}        
+        # uc = {"context":model.get_learned_conditioning(torch.zeros_like(src_img), src_label),
+        #     # "y":src_label
+        #     "y":torch.zeros(n_samples, 19, 256,256).cuda()}
 
     cond={"context":src_c, "y":src_label}
     shape = [3, 256//4, 256//4]
