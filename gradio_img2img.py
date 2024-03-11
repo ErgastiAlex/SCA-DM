@@ -157,8 +157,8 @@ def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps, emp
 iface = gr.Interface(
     fn=generate_images,
     inputs=[
-        gr.Dropdown([str(x) for x in range(27998,30000)]),
-        gr.Dropdown([str(x) for x in range(27998,30000)]),
+        gr.Dropdown([str(x) for x in range(28000,30000)]),
+        gr.Dropdown([str(x) for x in range(28000,30000)]),
         gr.CheckboxGroup(
             ['bg', 'skin', 'nose', 'eye_g', 'l_eye', 'r_eye', 'l_brow', 'r_brow', 'l_ear', 'r_ear', 'mouth',
         'u_lip', 'l_lip', 'hair', 'hat', 'ear_r', 'neck_l', 'neck', 'cloth'],
