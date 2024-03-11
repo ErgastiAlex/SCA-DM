@@ -43,6 +43,7 @@ def load_model_from_config(config, ckpt, verbose=False):
 def load_neural_network():
     config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
     model = load_model_from_config(config, "checkpoints/last.ckpt")
+    # model = load_model_from_config(config, "checkpoints/last.ckpt")
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
@@ -156,8 +157,8 @@ def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps, emp
 iface = gr.Interface(
     fn=generate_images,
     inputs=[
-        gr.Dropdown([str(x) for x in range(28000,30000)]),
-        gr.Dropdown([str(x) for x in range(28000,30000)]),
+        gr.Dropdown([str(x) for x in range(27998,30000)]),
+        gr.Dropdown([str(x) for x in range(27998,30000)]),
         gr.CheckboxGroup(
             ['bg', 'skin', 'nose', 'eye_g', 'l_eye', 'r_eye', 'l_brow', 'r_brow', 'l_ear', 'r_ear', 'mouth',
         'u_lip', 'l_lip', 'hair', 'hat', 'ear_r', 'neck_l', 'neck', 'cloth'],
