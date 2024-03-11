@@ -14,6 +14,14 @@ from ldm.models.diffusion.plms import PLMSSampler
 
 # Global variable to store the model
 sampler = None
+
+def parse_args():
+    parser=argparse.ArgumentParser(description="Gradio Interface for Image to Image")
+    parser.add_argument("--dataset", type=str, help="Dataset path", default="/home/datasets/CelebA-HQ/test/")
+    return parser.parse_args()
+
+args=parse_args()
+
 def load_model_from_config(config, ckpt, verbose=False):
     print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
@@ -33,12 +41,8 @@ def load_model_from_config(config, ckpt, verbose=False):
 
 # Placeholder for your neural network (replace with your actual model)
 def load_neural_network():
-    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-attn-loss-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
-    model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-07T07-41-27_with_uc-attn/checkpoints/last.ckpt")
-    # config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
-    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-12T14-39-25_mask-attn/checkpoints/epoch=000235.ckpt")
-    # config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-attn-l2-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
-    # model = load_model_from_config(config, "/home/ergale/projects/LDM-diffusion-sem/logs/2024-02-06T18-32-21_with_uc-attn-l2/checkpoints/last.ckpt")
+    config = OmegaConf.load("configs/latent-diffusion/diffusion-sem-with_uc-mask-attn-test.yaml")  # TODO: Optionally download from same location as ckpt and chnage this logic
+    model = load_model_from_config(config, "checkpoints/last.ckpt")
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
@@ -51,26 +55,6 @@ def initialize_model():
     global sampler
     if sampler is None:
         sampler = load_neural_network()
-
-def load_image_and_label(img_path, h, w):
-    #from img_path
-
-    im = Image.open(img_path)
-    im = im.resize((h,w))
-    im = np.array(im).astype(np.uint8)
-    im = np.transpose(im, (2, 0, 1))
-    im = (im/127.5 - 1.0).astype(np.float32)
-
-    label_path=os.path.join(path,"labels",img_name)
-            #change ext
-    label_path=label_path.replace(".jpg",".png")
-    label = Image.open(label_path)
-    label = label.resize((h,w), Image.NEAREST)
-    label = np.array(label).astype(np.uint8)
-    label = torch.from_numpy(label).to(torch.int64)
-    label = F.one_hot(label, num_classes=20).unsqueeze(0).permute(0, 3, 1, 2).float()
-
-    return torch.from_numpy(im[np.newaxis, ...]).cuda(), label.cuda()
 
 
 def sample(src_img, target_img, src_label, target_label, index_body_part, scale, ddim_steps, ddim_eta=0.0):
@@ -136,13 +120,15 @@ def transform_label(label):
 
 # Your image processing and neural network inference logic
 def generate_images(src_img_name, target_img_name, body_part, s, ddim_steps, empty_style):
-    src_img_path=os.path.join("/home/datasets/CelebA-HQ/test/images/", src_img_name+".jpg")
-    target_img_path=os.path.join("/home/datasets/CelebA-HQ/test/images/",target_img_name+".jpg")
+    global args
+
+    src_img_path=os.path.join(args.dataset, "images/", src_img_name+".jpg")
+    target_img_path=os.path.join(args.dataset, "images/", target_img_name+".jpg")
     src_img=Image.open(src_img_path)
     target_img=Image.open(target_img_path)
 
-    src_mask_path=os.path.join("/home/datasets/CelebA-HQ/test/labels/", src_img_name+".png")
-    target_mask_path=os.path.join("/home/datasets/CelebA-HQ/test/labels/", target_img_name+".png")
+    src_mask_path=os.path.join(args.dataset, "labels/", src_img_name+".png")
+    target_mask_path=os.path.join(args.dataset, "labels/", target_img_name+".png")
     src_mask=Image.open(src_mask_path)
     target_mask=Image.open(target_mask_path)
 
