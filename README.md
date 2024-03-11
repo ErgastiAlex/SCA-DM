@@ -12,7 +12,15 @@ inside the SpatialTransformer on the Cross Attention Map.
 [**Towards Controllable Face Generation with Semantic Latent Diffusion Models**]
 
 
+
 ## Results
+
+<p align="center">
+<img src=assets/model_capability.svg width=500/><br>
+Our model can generate images in three ways: (a) Given a reference image, (b) Given a reference image but with a specific body part with a random style, (c) Fully noise based without any reference.
+</p>
+
+
 <p align="center">
 <img src=assets/interpolation.svg /><br>
 Interpolation of eyes, mouth, hair style and full style going from full target
