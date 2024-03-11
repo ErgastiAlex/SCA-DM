@@ -48,5 +48,5 @@ conda activate diffusion
 To use ```gradio_img2img.py``` download the model from [here](https://univpr-my.sharepoint.com/:f:/g/personal/alex_ergasti_unipr_it/Emfpwm8xK3VPrYHgWzxpxHsB2ENjs5S6u5lPwI8CoO2I2g?e=hCb4Zi) and put it in the `checkpoints` folder.
 
 <p align="center">
-<img src=assets/gradio.gif /><br>
+<video src="assets/gradio.webm" width="300" />
 </p>
