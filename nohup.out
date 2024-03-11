@@ -1,156 +1,0 @@
-Loading model from /home/ergale/projects/LDM-diffusion-sem/logs_no_attn_loss/2024-01-17T14-33-09_diffusion-sem/checkpoints/last.ckpt
-LatentDiffusion: Running in eps-prediction mode
-DiffusionWrapper has 439.94 M params.
-Keeping EMAs of 707.
-making attention of type 'vanilla' with 512 in_channels
-Working with z of shape (1, 3, 64, 64) = 12288 dimensions.
-making attention of type 'vanilla' with 512 in_channels
-Restored from models/first_stage_models/vq-f4/model.ckpt with 0 missing and 55 unexpected keys
-Sampling:   0%|          | 0/1 [00:00<?, ?it/s]Data shape for DDIM sampling is (8, 3, 64, 64), eta 0.0
-Running DDIM Sampling with 200 timesteps
-
-DDIM Sampler:   0%|          | 0/200 [00:00<?, ?it/s][A
-DDIM Sampler:   0%|          | 1/200 [00:00<00:39,  5.02it/s][A
-DDIM Sampler:   1%|          | 2/200 [00:00<00:32,  6.12it/s][A
-DDIM Sampler:   2%|▏         | 3/200 [00:00<00:29,  6.61it/s][A
-DDIM Sampler:   2%|▏         | 4/200 [00:00<00:28,  6.85it/s][A
-DDIM Sampler:   2%|▎         | 5/200 [00:00<00:27,  6.98it/s][A
-DDIM Sampler:   3%|▎         | 6/200 [00:00<00:27,  7.06it/s][A
-DDIM Sampler:   4%|▎         | 7/200 [00:01<00:27,  7.12it/s][A
-DDIM Sampler:   4%|▍         | 8/200 [00:01<00:26,  7.16it/s][A
-DDIM Sampler:   4%|▍         | 9/200 [00:01<00:26,  7.18it/s][A
-DDIM Sampler:   5%|▌         | 10/200 [00:01<00:26,  7.19it/s][A
-DDIM Sampler:   6%|▌         | 11/200 [00:01<00:26,  7.20it/s][A
-DDIM Sampler:   6%|▌         | 12/200 [00:01<00:26,  7.22it/s][A
-DDIM Sampler:   6%|▋         | 13/200 [00:01<00:25,  7.22it/s][A
-DDIM Sampler:   7%|▋         | 14/200 [00:01<00:25,  7.22it/s][A
-DDIM Sampler:   8%|▊         | 15/200 [00:02<00:25,  7.23it/s][A
-DDIM Sampler:   8%|▊         | 16/200 [00:02<00:25,  7.23it/s][A
-DDIM Sampler:   8%|▊         | 17/200 [00:02<00:25,  7.22it/s][A
-DDIM Sampler:   9%|▉         | 18/200 [00:02<00:25,  7.21it/s][A
-DDIM Sampler:  10%|▉         | 19/200 [00:02<00:25,  7.22it/s][A
-DDIM Sampler:  10%|█         | 20/200 [00:02<00:24,  7.23it/s][A
-DDIM Sampler:  10%|█         | 21/200 [00:02<00:24,  7.24it/s][A
-DDIM Sampler:  11%|█         | 22/200 [00:03<00:24,  7.25it/s][A
-DDIM Sampler:  12%|█▏        | 23/200 [00:03<00:24,  7.25it/s][A
-DDIM Sampler:  12%|█▏        | 24/200 [00:03<00:24,  7.25it/s][A
-DDIM Sampler:  12%|█▎        | 25/200 [00:03<00:24,  7.24it/s][A
-DDIM Sampler:  13%|█▎        | 26/200 [00:03<00:24,  7.24it/s][A
-DDIM Sampler:  14%|█▎        | 27/200 [00:03<00:23,  7.23it/s][A
-DDIM Sampler:  14%|█▍        | 28/200 [00:03<00:23,  7.23it/s][A
-DDIM Sampler:  14%|█▍        | 29/200 [00:04<00:23,  7.23it/s][A
-DDIM Sampler:  15%|█▌        | 30/200 [00:04<00:23,  7.24it/s][A
-DDIM Sampler:  16%|█▌        | 31/200 [00:04<00:23,  7.25it/s][A
-DDIM Sampler:  16%|█▌        | 32/200 [00:04<00:23,  7.25it/s][A
-DDIM Sampler:  16%|█▋        | 33/200 [00:04<00:23,  7.25it/s][A
-DDIM Sampler:  17%|█▋        | 34/200 [00:04<00:22,  7.25it/s][A
-DDIM Sampler:  18%|█▊        | 35/200 [00:04<00:22,  7.25it/s][A
-DDIM Sampler:  18%|█▊        | 36/200 [00:05<00:22,  7.24it/s][A
-DDIM Sampler:  18%|█▊        | 37/200 [00:05<00:22,  7.23it/s][A
-DDIM Sampler:  19%|█▉        | 38/200 [00:05<00:22,  7.22it/s][A
-DDIM Sampler:  20%|█▉        | 39/200 [00:05<00:22,  7.22it/s][A
-DDIM Sampler:  20%|██        | 40/200 [00:05<00:22,  7.23it/s][A
-DDIM Sampler:  20%|██        | 41/200 [00:05<00:21,  7.23it/s][A
-DDIM Sampler:  21%|██        | 42/200 [00:05<00:21,  7.24it/s][A
-DDIM Sampler:  22%|██▏       | 43/200 [00:06<00:21,  7.24it/s][A
-DDIM Sampler:  22%|██▏       | 44/200 [00:06<00:21,  7.25it/s][A
-DDIM Sampler:  22%|██▎       | 45/200 [00:06<00:21,  7.25it/s][A
-DDIM Sampler:  23%|██▎       | 46/200 [00:06<00:21,  7.26it/s][A
-DDIM Sampler:  24%|██▎       | 47/200 [00:06<00:21,  7.25it/s][A
-DDIM Sampler:  24%|██▍       | 48/200 [00:06<00:20,  7.25it/s][A
-DDIM Sampler:  24%|██▍       | 49/200 [00:06<00:20,  7.24it/s][A
-DDIM Sampler:  25%|██▌       | 50/200 [00:06<00:20,  7.24it/s][A
-DDIM Sampler:  26%|██▌       | 51/200 [00:07<00:20,  7.24it/s][A
-DDIM Sampler:  26%|██▌       | 52/200 [00:07<00:20,  7.25it/s][A
-DDIM Sampler:  26%|██▋       | 53/200 [00:07<00:20,  7.24it/s][A
-DDIM Sampler:  27%|██▋       | 54/200 [00:07<00:20,  7.24it/s][A
-DDIM Sampler:  28%|██▊       | 55/200 [00:07<00:20,  7.24it/s][A
-DDIM Sampler:  28%|██▊       | 56/200 [00:07<00:19,  7.25it/s][A
-DDIM Sampler:  28%|██▊       | 57/200 [00:07<00:19,  7.25it/s][A
-DDIM Sampler:  29%|██▉       | 58/200 [00:08<00:19,  7.15it/s][A
-DDIM Sampler:  30%|██▉       | 59/200 [00:08<00:19,  7.18it/s][A
-DDIM Sampler:  30%|███       | 60/200 [00:08<00:19,  7.20it/s][A
-DDIM Sampler:  30%|███       | 61/200 [00:08<00:19,  7.22it/s][A
-DDIM Sampler:  31%|███       | 62/200 [00:08<00:19,  7.22it/s][A
-DDIM Sampler:  32%|███▏      | 63/200 [00:08<00:18,  7.22it/s][A
-DDIM Sampler:  32%|███▏      | 64/200 [00:08<00:18,  7.22it/s][A
-DDIM Sampler:  32%|███▎      | 65/200 [00:09<00:18,  7.21it/s][A
-DDIM Sampler:  33%|███▎      | 66/200 [00:09<00:18,  7.21it/s][A
-DDIM Sampler:  34%|███▎      | 67/200 [00:09<00:18,  7.22it/s][A
-DDIM Sampler:  34%|███▍      | 68/200 [00:09<00:18,  7.23it/s][A
-DDIM Sampler:  34%|███▍      | 69/200 [00:09<00:18,  7.23it/s][A
-DDIM Sampler:  35%|███▌      | 70/200 [00:09<00:17,  7.24it/s][A
-DDIM Sampler:  36%|███▌      | 71/200 [00:09<00:17,  7.24it/s][A
-DDIM Sampler:  36%|███▌      | 72/200 [00:10<00:17,  7.24it/s][A
-DDIM Sampler:  36%|███▋      | 73/200 [00:10<00:17,  7.24it/s][A
-DDIM Sampler:  37%|███▋      | 74/200 [00:10<00:17,  7.24it/s][A
-DDIM Sampler:  38%|███▊      | 75/200 [00:10<00:17,  7.24it/s][A
-DDIM Sampler:  38%|███▊      | 76/200 [00:10<00:17,  7.23it/s][A
-DDIM Sampler:  38%|███▊      | 77/200 [00:10<00:16,  7.24it/s][A
-DDIM Sampler:  39%|███▉      | 78/200 [00:10<00:16,  7.24it/s][A
-DDIM Sampler:  40%|███▉      | 79/200 [00:10<00:16,  7.24it/s][A
-DDIM Sampler:  40%|████      | 80/200 [00:11<00:16,  7.23it/s][A
-DDIM Sampler:  40%|████      | 81/200 [00:11<00:16,  7.24it/s][A
-DDIM Sampler:  41%|████      | 82/200 [00:11<00:16,  7.25it/s][A
-DDIM Sampler:  42%|████▏     | 83/200 [00:11<00:16,  7.25it/s][A
-DDIM Sampler:  42%|████▏     | 84/200 [00:11<00:16,  7.25it/s][A
-DDIM Sampler:  42%|████▎     | 85/200 [00:11<00:15,  7.25it/s][A
-DDIM Sampler:  43%|████▎     | 86/200 [00:11<00:15,  7.25it/s][A
-DDIM Sampler:  44%|████▎     | 87/200 [00:12<00:15,  7.25it/s][A
-DDIM Sampler:  44%|████▍     | 88/200 [00:12<00:15,  7.24it/s][A
-DDIM Sampler:  44%|████▍     | 89/200 [00:12<00:15,  7.25it/s][A
-DDIM Sampler:  45%|████▌     | 90/200 [00:12<00:15,  7.25it/s][A
-DDIM Sampler:  46%|████▌     | 91/200 [00:12<00:15,  7.25it/s][A
-DDIM Sampler:  46%|████▌     | 92/200 [00:12<00:14,  7.26it/s][A
-DDIM Sampler:  46%|████▋     | 93/200 [00:12<00:14,  7.25it/s][A
-DDIM Sampler:  47%|████▋     | 94/200 [00:13<00:14,  7.25it/s][A
-DDIM Sampler:  48%|████▊     | 95/200 [00:13<00:14,  7.15it/s][A
-DDIM Sampler:  48%|████▊     | 96/200 [00:13<00:14,  7.18it/s][A
-DDIM Sampler:  48%|████▊     | 97/200 [00:13<00:14,  7.20it/s][A
-DDIM Sampler:  49%|████▉     | 98/200 [00:13<00:14,  7.20it/s][A
-DDIM Sampler:  50%|████▉     | 99/200 [00:13<00:14,  7.21it/s][A
-DDIM Sampler:  50%|█████     | 100/200 [00:13<00:13,  7.21it/s][A
-DDIM Sampler:  50%|█████     | 101/200 [00:14<00:13,  7.22it/s][A
-DDIM Sampler:  51%|█████     | 102/200 [00:14<00:13,  7.23it/s][A
-DDIM Sampler:  52%|█████▏    | 103/200 [00:14<00:13,  7.24it/s][A
-DDIM Sampler:  52%|█████▏    | 104/200 [00:14<00:13,  7.24it/s][A
-DDIM Sampler:  52%|█████▎    | 105/200 [00:14<00:13,  7.25it/s][A
-DDIM Sampler:  53%|█████▎    | 106/200 [00:14<00:12,  7.25it/s][A
-DDIM Sampler:  54%|█████▎    | 107/200 [00:14<00:12,  7.25it/s][A
-DDIM Sampler:  54%|█████▍    | 108/200 [00:14<00:12,  7.25it/s][A
-DDIM Sampler:  55%|█████▍    | 109/200 [00:15<00:12,  7.25it/s][AGlobal seed set to 23
-/home/ergale/.conda/envs/diffusion/lib/python3.8/site-packages/pytorch_lightning/callbacks/model_checkpoint.py:446: UserWarning: Checkpoint directory /home/ergale/projects/LDM-diffusion-sem/logs_no_attn_loss/2024-01-17T14-33-09_diffusion-sem/checkpoints exists and is not empty.
-  rank_zero_warn(f"Checkpoint directory {dirpath} exists and is not empty.")
-GPU available: True, used: True
-TPU available: False, using: 0 TPU cores
-IPU available: False, using: 0 IPUs
-/home/ergale/.conda/envs/diffusion/lib/python3.8/site-packages/pytorch_lightning/trainer/configuration_validator.py:99: UserWarning: you passed in a test_dataloader but have no test_step. Skipping test loop
-  rank_zero_warn(f"you passed in a {loader_name} but have no {step_name}. Skipping {stage} loop")
-Global seed set to 23
-initializing ddp: GLOBAL_RANK: 0, MEMBER: 1/1
-----------------------------------------------------------------------------------------------------
-distributed_backend=nccl
-All DDP processes registered. Starting ddp with 1 processes
-----------------------------------------------------------------------------------------------------
-
-/home/ergale/.conda/envs/diffusion/lib/python3.8/site-packages/pytorch_lightning/core/datamodule.py:423: LightningDeprecationWarning: DataModule.setup has already been called, so it will not be called again. In v1.6 this behavior will change to always call DataModule.setup.
-  rank_zero_deprecation(
-LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [1]
-Running on GPUs 0,
-LatentDiffusion: Running in eps-prediction mode
-DiffusionWrapper has 439.94 M params.
-Keeping EMAs of 707.
-making attention of type 'vanilla' with 512 in_channels
-Working with z of shape (1, 3, 64, 64) = 12288 dimensions.
-making attention of type 'vanilla' with 512 in_channels
-Restored from models/first_stage_models/vq-f4/model.ckpt with 0 missing and 55 unexpected keys
-Monitoring val/loss_simple_ema as checkpoint metric.
-Merged modelckpt-cfg: 
-{'target': 'pytorch_lightning.callbacks.ModelCheckpoint', 'params': {'dirpath': '/home/ergale/projects/LDM-diffusion-sem/logs_no_attn_loss/2024-01-17T14-33-09_diffusion-sem/checkpoints', 'filename': '{epoch:06}', 'verbose': True, 'save_last': True, 'monitor': 'val/loss_simple_ema', 'save_top_k': 3}}
-#### Data #####
-train, CelebAHQ, 27999
-validation, CelebAHQ, 2000
-test, CelebAHQ, 2000
-accumulate_grad_batches = 6
-Setting learning rate to 1.92e-04 = 6 (accumulate_grad_batches) * 1 (num_gpus) * 16 (batchsize) * 2.00e-06 (base_lr)
-
