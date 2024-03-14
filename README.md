@@ -53,7 +53,7 @@ conda activate diffusion
 ```
 
 ### Checkpoints
-To use ```gradio_img2img.py``` download the model from [here](https://univpr-my.sharepoint.com/:f:/g/personal/alex_ergasti_unipr_it/Emfpwm8xK3VPrYHgWzxpxHsB2ENjs5S6u5lPwI8CoO2I2g?e=hCb4Zi) and put it in the `checkpoints` folder and download the VQ-F4 (f=4, VQ (Z=8192, d=3), first row in the table) from the [LDM repo](https://github.com/CompVis/latent-diffusion) following their instructions.
+To use ```gradio_img2img.py``` download the model from [here]() and put it in the `checkpoints` folder and download the VQ-F4 (f=4, VQ (Z=8192, d=3), first row in the table) from the [LDM repo](https://github.com/CompVis/latent-diffusion) following their instructions.
 
 <p align="center">
 <video src="https://github.com/ErgastiAlex/LDM-Diffusion-sem/assets/20249175/390c24a6-4aee-458c-8028-eaf845174807" />
