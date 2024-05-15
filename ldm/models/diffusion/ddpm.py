@@ -673,8 +673,9 @@ class LatentDiffusion(DDPM):
         one_hot_label=None
         if self.model.conditioning_key is not None:
             assert self.cond_stage_trainable!=False, "cond_stage_trainable must be True to use conditioning"
-
             one_hot_label=F.one_hot(batch["label"].to(torch.int64),self.model.diffusion_model.num_classes).permute(0,3,1,2).float().to(self.device) 
+            if bs is not None:
+                one_hot_label = one_hot_label[:bs]
         
         if self.probability_of_discard > 0.:
             # generate rnd

@@ -65,6 +65,44 @@ class CelebAHQ(FacesBase):
 
         return {"image":im, "label":label}
 
+class DeepFashion(FacesBase):
+    def __init__(self, size, path, train=True):
+        super().__init__()
+        self.size=size
+        if train:
+            prefix="train"
+        else:
+            prefix="test"
+        images_path=os.path.join(path,f"{prefix}_img")
+        labels_path=os.path.join(path,f"{prefix}_label")
+
+        images=os.listdir(images_path)
+
+        self.images = [os.path.join(images_path, img) for img in images]
+        self.labels = [os.path.join(labels_path, img.replace(".jpg", ".png")) for img in images]
+        
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, i):
+        img_name=self.images[i]
+        label_name=self.labels[i]
+
+        im = Image.open(img_name)
+        im = im.resize((self.size,self.size))
+        im = np.array(im).astype(np.uint8)
+        # im = np.transpose(im, (2, 0, 1))
+        im = (im/127.5 - 1.0).astype(np.float32)
+
+        label = Image.open(label_name)
+        label = label.resize((self.size,self.size), Image.NEAREST)
+        label = np.array(label).astype(np.uint8)
+        label = label[:,:,0]
+        label = torch.from_numpy(label).to(torch.int64)
+
+        return {"image":im, "label":label}
+
 class Cityscape(FacesBase):
     def __init__(self, size, path, prefix="train"):
         super().__init__()
