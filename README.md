@@ -59,6 +59,21 @@ To use ```gradio_img2img.py``` download the model from [here](https://drive.goog
 <video src="https://github.com/ErgastiAlex/LDM-Diffusion-sem/assets/20249175/390c24a6-4aee-458c-8028-eaf845174807" />
 
 
+# Citation
+If you find this repository usefull please cite us
+```tex
+@misc{ergasti2024controllablefacegenerationsemantic,
+      title={Towards Controllable Face Generation with Semantic Latent Diffusion Models}, 
+      author={Alex Ergasti and Claudio Ferrari and Tomaso Fontanini and Massimo Bertozzi and Andrea Prati},
+      year={2024},
+      eprint={2403.12743},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2403.12743}, 
+}
+```
+
+
 
 
 </p>
