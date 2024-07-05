@@ -59,7 +59,7 @@ To use ```gradio_img2img.py``` download the model from [here](https://drive.goog
 <video src="https://github.com/ErgastiAlex/LDM-Diffusion-sem/assets/20249175/390c24a6-4aee-458c-8028-eaf845174807" />
 
 # Others
-We thanks CompVis for their opensource codebase on which this project is based on.
+We thank CompVis for their opensource [codebase](https://github.com/CompVis/latent-diffusion) on which this project is based on.
 
 # Citation
 If you find this repository usefull please cite us
