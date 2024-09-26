@@ -48,10 +48,15 @@ A suitable [conda](https://conda.io/) environment named `diffusion` can be creat
 and activated with:
 
 ```
-conda env create -f environment.yaml
+conda env create - environment.yaml
 conda activate diffusion
 ```
 
+or 
+
+```
+pip install -f requirements.txt
+```
 ### Checkpoints
 To use ```gradio_img2img.py``` download the model from [here](https://drive.google.com/file/d/1dZ4XQv8i3T2vtHnCuSsKXelz__pvUhdj/view?usp=sharing) and put it in the `checkpoints` folder and download the VQ-F4 (f=4, VQ (Z=8192, d=3), first row in the table) from the [LDM repo](https://github.com/CompVis/latent-diffusion) following their instructions.
 
@@ -64,8 +69,8 @@ We thank CompVis for their opensource [codebase](https://github.com/CompVis/late
 # Citation
 If you find this repository usefull please cite us
 ```tex
-@misc{ergasti2024controllablefacegenerationsemantic,
-      title={Towards Controllable Face Generation with Semantic Latent Diffusion Models}, 
+@misc{ergasti2024controllablefacesynthesissemantic,
+      title={Controllable Face Synthesis with Semantic Latent Diffusion Models}, 
       author={Alex Ergasti and Claudio Ferrari and Tomaso Fontanini and Massimo Bertozzi and Andrea Prati},
       year={2024},
       eprint={2403.12743},
