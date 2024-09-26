@@ -9,7 +9,7 @@ SDM, to encapsulate the semantic mask info. The Mask attention mechanism is appl
 inside the SpatialTransformer on the Cross Attention Map.
 </p>
 
-[**Towards Controllable Face Generation with Semantic Latent Diffusion Models**]
+[**Controllable Face Synthesis with Semantic Latent Diffusion Models**]
 
 
 
