@@ -12,6 +12,7 @@ inside the SpatialTransformer on the Cross Attention Map.
 [**Controllable Face Synthesis with Semantic Latent Diffusion Models**]
 
 
+Accepted at ICPR 2024 FBE workshop
 
 ## Results
 
@@ -67,7 +68,7 @@ To use ```gradio_img2img.py``` download the model from [here](https://drive.goog
 We thank CompVis for their opensource [codebase](https://github.com/CompVis/latent-diffusion) on which this project is based on.
 
 # Citation
-If you find this repository usefull please cite us
+If you find this repository usefull please cite us:
 ```tex
 @misc{ergasti2024controllablefacesynthesissemantic,
       title={Controllable Face Synthesis with Semantic Latent Diffusion Models}, 
