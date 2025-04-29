@@ -70,15 +70,29 @@ We thank CompVis for their opensource [codebase](https://github.com/CompVis/late
 # Citation
 If you find this repository usefull please cite us:
 ```tex
-@misc{ergasti2024controllablefacesynthesissemantic,
-      title={Controllable Face Synthesis with Semantic Latent Diffusion Models}, 
-      author={Alex Ergasti and Claudio Ferrari and Tomaso Fontanini and Massimo Bertozzi and Andrea Prati},
-      year={2024},
-      eprint={2403.12743},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2403.12743}, 
+@InProceedings{10.1007/978-3-031-87660-8_25,
+author="Ergasti, Alex
+and Ferrari, Claudio
+and Fontanini, Tomaso
+and Bertozzi, Massimo
+and Prati, Andrea",
+editor="Palaiahnakote, Shivakumara
+and Schuckers, Stephanie
+and Ogier, Jean-Marc
+and Bhattacharya, Prabir
+and Pal, Umapada
+and Bhattacharya, Saumik",
+title="Controllable Face Synthesis with Semantic Latent Diffusion Models",
+booktitle="Pattern Recognition. ICPR 2024 International Workshops and Challenges",
+year="2025",
+publisher="Springer Nature Switzerland",
+address="Cham",
+pages="337--352",
+abstract="Semantic Image Synthesis (SIS) is among the most popular and effective techniques in the field of face generation and editing, thanks to its good generation quality and the versatility is brings along. Recent works attempted to go beyond the standard GAN-based framework, and started to explore Diffusion Models (DMs) for this task as these stand out with respect to GANs in terms of both quality and diversity. On the other hand, DMs lack in fine-grained controllability and reproducibility. To address that, in this paper we propose a SIS framework based on a novel Latent Diffusion Model architecture for human face generation and editing that is both able to reproduce and manipulate a real reference image and generate diversity-driven results. The proposed system utilizes both SPADE normalization and cross-attention layers to merge shape and style information and, by doing so, allows for a precise control over each of the semantic parts of the human face. This was not possible with previous methods in the state of the art. Finally, we performed an extensive set of experiments to prove that our model surpasses current state of the art, both qualitatively and quantitatively.",
+isbn="978-3-031-87660-8"
 }
+
+
 ```
 
 
